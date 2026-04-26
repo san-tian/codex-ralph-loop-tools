@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ralph-loop-tools": {
+      "command": "python3",
+      "args": [
+        "-u",
+        "scripts/ralph_loop_mcp_server.py"
+      ],
+      "cwd": "."
+    }
+  }
+}

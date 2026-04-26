@@ -1,0 +1,41 @@
+{
+  "name": "ralph-loop-tools",
+  "version": "0.3.0",
+  "description": "Repo-local Pi-inspired Ralph loop MCP tools for Codex.",
+  "author": {
+    "name": "san-tian",
+    "email": "ccss@tju.edu.cn",
+    "url": "https://github.com/san-tian"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ralph",
+    "loop",
+    "mcp",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks.json",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Ralph Loop Tools",
+    "shortDescription": "Pi-style Ralph loops with tmux auto-follow for Codex.",
+    "longDescription": "Adds local MCP tools plus workspace hooks for Pi-style Ralph loop control in Codex, including start, continue, status, resume, pause, list, cancel, archive, and tmux-based compact-then-follow-up.",
+    "developerName": "san-tian",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/san-tian/codex-ralph-loop-tools-plugin",
+    "privacyPolicyURL": "https://openai.com/policies/row-privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/row-terms-of-use/",
+    "defaultPrompt": [
+      "开一个 ralph loop，名字叫 ios-reconnect。",
+      "继续这个 ralph loop。",
+      "查看 Ralph 状态。",
+      "暂停这个 Ralph loop。"
+    ],
+    "brandColor": "#2563EB"
+  }
+}

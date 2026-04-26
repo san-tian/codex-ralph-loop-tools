@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CODEX_HOOK_SOURCE_DIR/scripts/ralph_hook.py\"",
+            "timeout": 5,
+            "statusMessage": "Loading Ralph loop context"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CODEX_HOOK_SOURCE_DIR/scripts/ralph_hook.py\"",
+            "timeout": 5,
+            "statusMessage": "Checking Ralph loop context"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CODEX_HOOK_SOURCE_DIR/scripts/ralph_hook.py\"",
+            "timeout": 5,
+            "statusMessage": "Advancing Ralph loop"
+          }
+        ]
+      }
+    ]
+  }
+}
