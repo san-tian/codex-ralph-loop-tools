@@ -2,7 +2,7 @@
 
 Repo-local Codex plugin that brings Pi-style `ralph-wiggum` loops into Codex.
 
-Canonical GitHub repository: `https://github.com/san-tian/codex-ralph-loop-tools-plugin`.
+Canonical GitHub repository: `https://github.com/san-tian/codex-ralph-loop-tools`.
 
 It provides:
 
