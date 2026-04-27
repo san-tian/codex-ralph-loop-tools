@@ -142,6 +142,8 @@ An iteration advances only when:
 
 Agents must not substitute direct calls to internal helper functions such as `advance_loop(...)` for `ralph_done`. Those helpers are implementation details. Bypassing `ralph_done` can advance the saved iteration counter without the supported handoff semantics, and `advance_loop(..., record_prompt_trigger=False)` in particular can leave the loop on a new iteration without refreshing the next-prompt fingerprint that Ralph hooks expect for the next turn.
 
+The same rule applies if the host session appears to know about the Ralph plugin but does not actually expose callable `ralph_*` MCP tools. In that case, the agent should report that the official Ralph control surface is unavailable in this Codex session. It should not treat direct reads or writes under `.tmp/ralph-loop-tools/` as an equivalent replacement for the missing MCP tool surface.
+
 ## Copyable Agent Prompt
 
 If you want to hand this setup job to another agent, give it this block:
@@ -287,6 +289,22 @@ Common causes:
 ### `editing the task file did nothing`
 
 That is expected. The loop only hands off on `ralph_done` or successful tmux auto-follow.
+
+### `the session shows the Ralph plugin/skill, but there are no ralph_* tools`
+
+Meaning:
+
+- plugin discovery or skill injection happened, but the host did not expose the Ralph MCP server's callable tools to this agent session
+
+What to tell the user:
+
+- this is a Codex host MCP exposure problem, not a Ralph loop state problem
+- the official Ralph control surface is unavailable in this session
+- the agent should not inspect or mutate `.tmp/ralph-loop-tools/` as a substitute for missing `ralph_*` tools
+
+Safe operator check:
+
+- directly probe `scripts/ralph_loop_mcp_server.py` over stdio with `initialize` and `tools/list`; if that returns the `ralph_*` tools, the plugin server is healthy and the gap is between the host session and MCP tool injection
 
 ### `this session is reading another session's loop`
 
