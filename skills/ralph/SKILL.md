@@ -29,6 +29,8 @@ Available tools:
 
 Updating the task file alone does **not** hand off the iteration. A Ralph iteration is only handed off when `ralph_done` runs successfully or when tmux follow-up has clearly entered its pending continuation path and then successfully pastes the next prompt.
 
+Do **not** bypass the Ralph control surface by calling internal helper functions such as `advance_loop(...)` directly from shell/Python snippets. That can advance the saved iteration counter without going through the supported `ralph_done` handoff path, and variants such as `record_prompt_trigger=False` can leave the session on a new iteration without refreshing the next-prompt fingerprint that hooks use for the next turn.
+
 ## Tmux Requirement
 
 Pi-like automatic follow-up requires the current Codex TUI to run inside tmux.
@@ -100,6 +102,7 @@ When the user asks to continue the current loop or move to the next iteration, c
 - If the user names a loop, pass `name`.
 - Otherwise call `ralph_done` without `name`.
 - Do not call `ralph_done` to begin work. It is the iteration handoff after real progress.
+- Do not substitute direct calls to internal loop helpers such as `advance_loop(...)` for `ralph_done`. Those helpers are implementation details, not the agent-facing handoff API.
 - For automatic continuation, require tmux and use the tmux follow-up script with `--compact-first`. If `TMUX` is not set, tell the user it cannot auto-continue.
 - If auto-follow does not continue, inspect `ralph_status` or `.tmp/ralph-loop-tools/tmux-followup.log` and tell the user the loop did **not** successfully hand off yet.
 

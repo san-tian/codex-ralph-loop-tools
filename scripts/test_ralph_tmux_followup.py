@@ -215,6 +215,49 @@ class RalphTmuxFollowupTests(unittest.TestCase):
                 with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-b"}, clear=False):
                     self.assertEqual(ralph.get_current_loop_name(), "loop-b")
 
+    def test_advance_loop_without_prompt_trigger_does_not_refresh_expected_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with temporary_ralph_repo(repo_root):
+                ralph.ensure_state_dirs()
+                state = self.make_state("loop-a", owner_session="thread-a")
+                original_prompt = ralph.render_iteration_prompt(state)
+                ralph.set_expected_prompt("loop-a", original_prompt, session_id="thread-a")
+                original_payload = json.loads(
+                    ralph.session_prompt_trigger_path("thread-a").read_text(encoding="utf-8")
+                )
+
+                with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-a"}, clear=False):
+                    prompt = ralph.advance_loop(
+                        {"name": "loop-a"},
+                        record_prompt_trigger=False,
+                    )
+
+                refreshed_payload = json.loads(
+                    ralph.session_prompt_trigger_path("thread-a").read_text(encoding="utf-8")
+                )
+                self.assertEqual(refreshed_payload, original_payload)
+                self.assertNotEqual(prompt, original_prompt)
+
+    def test_ralph_done_refreshes_expected_prompt_for_current_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with temporary_ralph_repo(repo_root):
+                ralph.ensure_state_dirs()
+                state = self.make_state("loop-a", owner_session="thread-a")
+                original_prompt = ralph.render_iteration_prompt(state)
+                ralph.set_expected_prompt("loop-a", original_prompt, session_id="thread-a")
+
+                with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-a"}, clear=False):
+                    prompt = ralph.advance_loop({"name": "loop-a"})
+
+                refreshed_payload = json.loads(
+                    ralph.session_prompt_trigger_path("thread-a").read_text(encoding="utf-8")
+                )
+                self.assertEqual(refreshed_payload["name"], "loop-a")
+                self.assertNotEqual(refreshed_payload["fingerprint"], ralph.prompt_fingerprint(original_prompt))
+                self.assertEqual(refreshed_payload["fingerprint"], ralph.prompt_fingerprint(prompt))
+
     def test_legacy_shared_owner_loop_is_not_auto_adopted_by_new_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)

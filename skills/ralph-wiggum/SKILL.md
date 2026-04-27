@@ -26,6 +26,7 @@ Task contract and limitations match the main `ralph` skill:
 - Keep `Goals`, `Checklist`, `Verification`, and `Notes`
 - Continue iterations with `ralph_done`
 - Updating the task file alone does not hand off the iteration; the handoff happens only when `ralph_done` (or a successful tmux auto-follow built on it) actually advances the loop
+- Do not bypass the Ralph control surface with direct internal helper calls such as `advance_loop(...)`; that can advance iteration state without the supported `ralph_done` handoff semantics or prompt-trigger refresh
 - Completion is inferred from checklist completion or `<promise>COMPLETE</promise>` inside the task file
 - Pi-like automatic compact-then-follow-up requires tmux; if `TMUX` is not set, tell the user it is unavailable and do not offer a non-tmux fallback
 - Compact is triggered through Codex TUI `/compact` via tmux, not through a host API

@@ -140,6 +140,8 @@ An iteration advances only when:
 - `ralph_done` succeeds, or
 - tmux auto-follow succeeds and pastes the next prompt
 
+Agents must not substitute direct calls to internal helper functions such as `advance_loop(...)` for `ralph_done`. Those helpers are implementation details. Bypassing `ralph_done` can advance the saved iteration counter without the supported handoff semantics, and `advance_loop(..., record_prompt_trigger=False)` in particular can leave the loop on a new iteration without refreshing the next-prompt fingerprint that Ralph hooks expect for the next turn.
+
 ## Copyable Agent Prompt
 
 If you want to hand this setup job to another agent, give it this block:
@@ -280,6 +282,7 @@ Common causes:
 - pane never reached idle state
 - `/compact` did not finish
 - tmux paste delivery failed
+- an agent bypassed `ralph_done` and directly called internal loop helpers such as `advance_loop(...)`, so the iteration counter changed without a real Ralph handoff
 
 ### `editing the task file did nothing`
 
