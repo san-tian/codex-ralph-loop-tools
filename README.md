@@ -146,6 +146,8 @@ Agents must not substitute direct calls to internal helper functions such as `ad
 
 The same rule applies if the host session appears to know about the Ralph plugin but does not actually expose callable Ralph MCP tools under either the bare plugin names (`ralph_*`) or the host-qualified Codex MCP names (`mcp__ralph-loop-tools__ralph_*`). In that case, the agent should report that the official Ralph control surface is unavailable in this Codex session. It should not treat direct reads or writes under `.tmp/ralph-loop-tools/` as an equivalent replacement for the missing MCP tool surface.
 
+Ralph current-loop ownership is also session-scoped. If a loop is still `active` in another Codex session, naming that loop explicitly does not bypass isolation: mutating operations such as `ralph_done`, `ralph_stop`, forced restart of the same active loop, and `ralph_cancel` now fail instead of letting one session silently advance or destroy another session's active loop.
+
 ## Copyable Agent Prompt
 
 If you want to hand this setup job to another agent, give it this block:

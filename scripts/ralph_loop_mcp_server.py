@@ -371,6 +371,19 @@ def state_owned_by_session(state: LoopState, session_id: str | None) -> bool:
     return state.owner_session == session_id
 
 
+def ensure_mutation_access(state: LoopState) -> None:
+    owner_session = normalize_session_id(state.owner_session)
+    if not owner_session or state.status != "active":
+        return
+    current = current_session_id()
+    if current == owner_session:
+        return
+    raise ValueError(
+        f'Loop "{state.name}" is active in another Codex session ({owner_session}). '
+        "Switch back to that session before changing it here."
+    )
+
+
 def state_session_scope(state: LoopState, session_id: str | None = None) -> str | None:
     explicit = normalize_session_id(session_id)
     if explicit:
@@ -916,6 +929,7 @@ def start_loop(arguments: dict[str, Any]) -> str:
     state_path = loop_state_path(loop_name)
     if state_path.exists():
         existing = load_loop_state(loop_name)
+        ensure_mutation_access(existing)
         if existing.status == "active" and not force:
             raise ValueError(
                 f'Loop "{loop_name}" is already active. Stop it first or pass force=true.'
@@ -972,6 +986,7 @@ def advance_loop(
     ensure_state_dirs()
     loop_name = resolve_loop_name(arguments.get("name"))
     state = load_loop_state(loop_name)
+    ensure_mutation_access(state)
 
     if state.status != "active":
         raise ValueError(f'Loop "{loop_name}" is not active (status={state.status}).')
@@ -1057,6 +1072,7 @@ def stop_loop(arguments: dict[str, Any]) -> str:
     ensure_state_dirs()
     loop_name = resolve_loop_name(arguments.get("name"))
     state = load_loop_state(loop_name)
+    ensure_mutation_access(state)
     if state.status != "active":
         raise ValueError(f'Loop "{loop_name}" is not active (status={state.status}).')
     pause_loop(state)
@@ -1081,6 +1097,7 @@ def cancel_loop(arguments: dict[str, Any]) -> str:
     if not isinstance(raw_name, str) or not raw_name.strip():
         raise ValueError("name is required.")
     state, archived = resolve_existing_loop(raw_name)
+    ensure_mutation_access(state)
     target_dir = loop_dir(state.name, archived)
     clear_current_loop(state.name)
     shutil.rmtree(target_dir, ignore_errors=False)

@@ -45,6 +45,8 @@ When `TMUX` is set, use `scripts/ralph_tmux_followup.py --compact-first` for Pi-
 
 Ralph resolves hook-driven session scope from the hook event's `session_id` first, and otherwise uses `CODEX_THREAD_ID` / `CODEX_WEB_RESUME_SESSION_ID` for implicit current-loop resolution. Another session should not inherit your current Ralph loop unless the user explicitly names that loop.
 
+Explicit loop names do not bypass active-loop ownership. If a loop is still active in another Codex session, mutating operations such as `ralph_done`, `ralph_stop`, `force=true` restart of that same active loop, or `ralph_cancel` must fail instead of letting one session change another session's active loop.
+
 Automatic follow-up also depends on Ralph hooks being installed through a supported config-layer `hooks.json`. In this workspace, `scripts/install_workspace_hooks.py` writes `/vePFS-Mindverse/user/intern/ccss/.codex/hooks.json`, and that file calls the source-tree `scripts/ralph_hook.py` by absolute path so the active cwd can be another project under `ccss/`.
 
 Ralph hook guidance is intentionally narrow: `SessionStart` stays silent, and `UserPromptSubmit` only injects Ralph loop context when the submitted prompt exactly matches a session-scoped next-iteration prompt previously emitted by Ralph itself. Mentioning Ralph in ordinary prose does not trigger hook injection.

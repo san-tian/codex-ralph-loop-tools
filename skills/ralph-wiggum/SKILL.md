@@ -30,6 +30,7 @@ Task contract and limitations match the main `ralph` skill:
 - Updating the task file alone does not hand off the iteration; the handoff happens only when `ralph_done` (or a successful tmux auto-follow built on it) actually advances the loop
 - Do not bypass the Ralph control surface with direct internal helper calls such as `advance_loop(...)`; that can advance iteration state without the supported `ralph_done` handoff semantics or prompt-trigger refresh
 - If the host shows the Ralph plugin/skill but does not actually expose callable Ralph tools in the session under either the bare `ralph_*` names or the host-qualified names such as `mcp__ralph-loop-tools__ralph_start`, treat that as a host-side MCP exposure failure and report it instead of reading or mutating `.tmp/ralph-loop-tools/` state directly
+- Explicit loop names do not bypass active-loop ownership. If a loop is still active in another Codex session, mutating operations such as `ralph_done`, `ralph_stop`, forced restart of that same active loop, or `ralph_cancel` must fail instead of letting one session change another session's active loop
 - Completion is inferred from checklist completion or `<promise>COMPLETE</promise>` inside the task file
 - Pi-like automatic compact-then-follow-up requires tmux; if `TMUX` is not set, tell the user it is unavailable and do not offer a non-tmux fallback
 - Compact is triggered through Codex TUI `/compact` via tmux, not through a host API

@@ -517,7 +517,7 @@ class RalphTmuxFollowupTests(unittest.TestCase):
                 self.assertEqual(state_c.status, "active")
                 self.assertEqual(state_c.owner_session, "thread-b")
 
-    def test_advance_loop_keeps_owner_session_scope_even_with_foreign_environment(self) -> None:
+    def test_advance_loop_rejects_foreign_owned_active_loop_even_with_explicit_name(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
             with temporary_ralph_repo(repo_root):
@@ -530,17 +530,70 @@ class RalphTmuxFollowupTests(unittest.TestCase):
                     {"CODEX_THREAD_ID": "thread-b", "CODEX_WEB_RESUME_SESSION_ID": ""},
                     clear=False,
                 ):
-                    prompt = ralph.advance_loop({"name": "loop-a"})
+                    with self.assertRaisesRegex(ValueError, 'Loop "loop-a" is active in another Codex session'):
+                        ralph.advance_loop({"name": "loop-a"})
 
-                self.assertIn("Iteration 2/5", prompt)
                 self.assertTrue(ralph.session_current_loop_path("thread-a").exists())
                 self.assertFalse(ralph.session_current_loop_path("thread-b").exists())
                 self.assertFalse(ralph.CURRENT_LOOP_PATH.exists())
-                self.assertTrue(ralph.session_prompt_trigger_path("thread-a").exists())
+                self.assertFalse(ralph.session_prompt_trigger_path("thread-a").exists())
                 self.assertFalse(ralph.session_prompt_trigger_path("thread-b").exists())
                 self.assertFalse(ralph.PROMPT_TRIGGER_PATH.exists())
                 reloaded = ralph.load_loop_state(state.name)
-                self.assertEqual(reloaded.iteration, 2)
+                self.assertEqual(reloaded.iteration, 1)
+                self.assertEqual(reloaded.owner_session, "thread-a")
+
+    def test_stop_loop_rejects_foreign_owned_active_loop_even_with_explicit_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with temporary_ralph_repo(repo_root):
+                ralph.ensure_state_dirs()
+                state = self.make_state("loop-a", owner_session="thread-a")
+                ralph.set_current_loop("loop-a", session_id="thread-a")
+
+                with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-b"}, clear=False):
+                    with self.assertRaisesRegex(ValueError, 'Loop "loop-a" is active in another Codex session'):
+                        ralph.stop_loop({"name": "loop-a"})
+
+                reloaded = ralph.load_loop_state(state.name)
+                self.assertEqual(reloaded.status, "active")
+                self.assertEqual(reloaded.owner_session, "thread-a")
+
+    def test_force_start_rejects_foreign_owned_active_loop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with temporary_ralph_repo(repo_root):
+                ralph.ensure_state_dirs()
+                self.make_state("loop-a", owner_session="thread-a")
+                original_task = ralph.loop_task_path("loop-a").read_text(encoding="utf-8")
+
+                with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-b"}, clear=False):
+                    with self.assertRaisesRegex(ValueError, 'Loop "loop-a" is active in another Codex session'):
+                        ralph.start_loop(
+                            {
+                                "name": "loop-a",
+                                "taskContent": "# Replaced\n\n## Checklist\n- [ ] changed\n",
+                                "force": True,
+                            }
+                        )
+
+                reloaded = ralph.load_loop_state("loop-a")
+                self.assertEqual(reloaded.owner_session, "thread-a")
+                self.assertEqual(reloaded.iteration, 1)
+                self.assertEqual(ralph.loop_task_path("loop-a").read_text(encoding="utf-8"), original_task)
+
+    def test_cancel_rejects_foreign_owned_active_loop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            with temporary_ralph_repo(repo_root):
+                ralph.ensure_state_dirs()
+                self.make_state("loop-a", owner_session="thread-a")
+
+                with mock.patch.dict(os.environ, {"CODEX_THREAD_ID": "thread-b"}, clear=False):
+                    with self.assertRaisesRegex(ValueError, 'Loop "loop-a" is active in another Codex session'):
+                        ralph.cancel_loop({"name": "loop-a"})
+
+                self.assertTrue(ralph.loop_state_path("loop-a").exists())
 
     def test_preview_next_prompt_does_not_advance_loop_iteration(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
