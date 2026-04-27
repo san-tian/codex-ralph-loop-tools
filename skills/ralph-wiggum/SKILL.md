@@ -18,6 +18,8 @@ Available tools:
 - `ralph_cancel`
 - `ralph_archive`
 
+When Codex exposes those tools through its host MCP layer, the actual callable names may be host-qualified forms such as `mcp__ralph-loop-tools__ralph_start` and `mcp__ralph-loop-tools__ralph_done` rather than bare `ralph_start` / `ralph_done` names.
+
 Use this skill when the user explicitly references "Ralph Wiggum", "ralph-wiggum", or asks for Pi-style multi-iteration looping behavior inside Codex.
 
 Task contract and limitations match the main `ralph` skill:
@@ -27,7 +29,7 @@ Task contract and limitations match the main `ralph` skill:
 - Continue iterations with `ralph_done`
 - Updating the task file alone does not hand off the iteration; the handoff happens only when `ralph_done` (or a successful tmux auto-follow built on it) actually advances the loop
 - Do not bypass the Ralph control surface with direct internal helper calls such as `advance_loop(...)`; that can advance iteration state without the supported `ralph_done` handoff semantics or prompt-trigger refresh
-- If the host shows the Ralph plugin/skill but does not actually expose callable `ralph_*` tools in the session, treat that as a host-side MCP exposure failure and report it instead of reading or mutating `.tmp/ralph-loop-tools/` state directly
+- If the host shows the Ralph plugin/skill but does not actually expose callable Ralph tools in the session under either the bare `ralph_*` names or the host-qualified names such as `mcp__ralph-loop-tools__ralph_start`, treat that as a host-side MCP exposure failure and report it instead of reading or mutating `.tmp/ralph-loop-tools/` state directly
 - Completion is inferred from checklist completion or `<promise>COMPLETE</promise>` inside the task file
 - Pi-like automatic compact-then-follow-up requires tmux; if `TMUX` is not set, tell the user it is unavailable and do not offer a non-tmux fallback
 - Compact is triggered through Codex TUI `/compact` via tmux, not through a host API

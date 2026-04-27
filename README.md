@@ -15,6 +15,8 @@ It provides:
 - `ralph_cancel`
 - `ralph_archive`
 
+When Codex exposes those MCP tools through its host layer, the model-visible callable names may be host-qualified forms such as `mcp__ralph-loop-tools__ralph_start` and `mcp__ralph-loop-tools__ralph_done` rather than bare `ralph_start` / `ralph_done` names.
+
 The plugin stores loop state under `.tmp/ralph-loop-tools/`, injects Ralph control context only for real Ralph-generated iteration prompts through Codex hooks, and can do Pi-like automatic compact-then-follow-up through tmux.
 
 The hook-injected context is not just status text. For actual Ralph iteration turns, it tells the agent that updating `task.md` alone does not hand off an iteration and that Ralph operations must use the Ralph control surface such as `ralph_start`, `ralph_status`, and `ralph_done`.
@@ -142,7 +144,7 @@ An iteration advances only when:
 
 Agents must not substitute direct calls to internal helper functions such as `advance_loop(...)` for `ralph_done`. Those helpers are implementation details. Bypassing `ralph_done` can advance the saved iteration counter without the supported handoff semantics, and `advance_loop(..., record_prompt_trigger=False)` in particular can leave the loop on a new iteration without refreshing the next-prompt fingerprint that Ralph hooks expect for the next turn.
 
-The same rule applies if the host session appears to know about the Ralph plugin but does not actually expose callable `ralph_*` MCP tools. In that case, the agent should report that the official Ralph control surface is unavailable in this Codex session. It should not treat direct reads or writes under `.tmp/ralph-loop-tools/` as an equivalent replacement for the missing MCP tool surface.
+The same rule applies if the host session appears to know about the Ralph plugin but does not actually expose callable Ralph MCP tools under either the bare plugin names (`ralph_*`) or the host-qualified Codex MCP names (`mcp__ralph-loop-tools__ralph_*`). In that case, the agent should report that the official Ralph control surface is unavailable in this Codex session. It should not treat direct reads or writes under `.tmp/ralph-loop-tools/` as an equivalent replacement for the missing MCP tool surface.
 
 ## Copyable Agent Prompt
 
@@ -290,21 +292,22 @@ Common causes:
 
 That is expected. The loop only hands off on `ralph_done` or successful tmux auto-follow.
 
-### `the session shows the Ralph plugin/skill, but there are no ralph_* tools`
+### `the session shows the Ralph plugin/skill, but there are no usable Ralph tools`
 
 Meaning:
 
-- plugin discovery or skill injection happened, but the host did not expose the Ralph MCP server's callable tools to this agent session
+- plugin discovery or skill injection happened, but the host did not expose the Ralph MCP server's callable tools to this agent session under either bare `ralph_*` names or host-qualified names like `mcp__ralph-loop-tools__ralph_start`
 
 What to tell the user:
 
-- this is a Codex host MCP exposure problem, not a Ralph loop state problem
+- absence of bare `ralph_*` names alone is not enough to diagnose failure, because some Codex hosts qualify MCP tools as `mcp__<server>__<tool>`
+- this is a Codex host MCP exposure problem only when neither the bare Ralph names nor the host-qualified Ralph names are available
 - the official Ralph control surface is unavailable in this session
-- the agent should not inspect or mutate `.tmp/ralph-loop-tools/` as a substitute for missing `ralph_*` tools
+- the agent should not inspect or mutate `.tmp/ralph-loop-tools/` as a substitute for the missing official Ralph tools
 
 Safe operator check:
 
-- directly probe `scripts/ralph_loop_mcp_server.py` over stdio with `initialize` and `tools/list`; if that returns the `ralph_*` tools, the plugin server is healthy and the gap is between the host session and MCP tool injection
+- directly probe `scripts/ralph_loop_mcp_server.py` over stdio with `initialize` and `tools/list`; if that returns the raw `ralph_*` tools, the plugin server is healthy and the remaining gap is between the host session and MCP tool injection/namespacing
 
 ### `this session is reading another session's loop`
 

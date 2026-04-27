@@ -18,6 +18,8 @@ Available tools:
 - `ralph_cancel`
 - `ralph_archive`
 
+When Ralph is exposed through Codex's host MCP layer, those same tools are typically model-visible under the host-qualified names `mcp__ralph-loop-tools__ralph_start`, `mcp__ralph-loop-tools__ralph_done`, and so on. The raw names above describe the Ralph control surface itself; the actual callable names in a Codex session may be the namespaced MCP forms.
+
 ## Loop Behavior
 
 1. Start the loop with a complete task file body by calling `ralph_start`.
@@ -31,7 +33,7 @@ Updating the task file alone does **not** hand off the iteration. A Ralph iterat
 
 Do **not** bypass the Ralph control surface by calling internal helper functions such as `advance_loop(...)` directly from shell/Python snippets. That can advance the saved iteration counter without going through the supported `ralph_done` handoff path, and variants such as `record_prompt_trigger=False` can leave the session on a new iteration without refreshing the next-prompt fingerprint that hooks use for the next turn.
 
-If the Codex host exposes the Ralph plugin/skill in the prompt but the actual callable tool list does **not** include `ralph_start`, `ralph_done`, `ralph_status`, and the rest of the Ralph MCP surface, treat that as a host-side MCP exposure failure. In that situation, tell the user the official Ralph control surface is unavailable in this session and do **not** substitute direct reads or writes of `.tmp/ralph-loop-tools/` state files for the missing tools.
+If the Codex host exposes the Ralph plugin/skill in the prompt but the actual callable tool list does **not** include either the raw Ralph names (`ralph_start`, `ralph_done`, `ralph_status`, ...) or the host-qualified MCP names (`mcp__ralph-loop-tools__ralph_start`, `mcp__ralph-loop-tools__ralph_done`, ...), treat that as a host-side MCP exposure failure. In that situation, tell the user the official Ralph control surface is unavailable in this session and do **not** substitute direct reads or writes of `.tmp/ralph-loop-tools/` state files for the missing tools.
 
 ## Tmux Requirement
 
@@ -137,4 +139,5 @@ This skill intentionally mirrors Pi Ralph's structure and wording, but Codex can
 - It does not support automatic follow-up outside tmux.
 - It does not auto-compact the thread through a Codex host API.
 - It cannot observe the assistant's emitted `<promise>COMPLETE</promise>` directly, so that marker must be written into the task file if you want to use it.
-- A Codex session may show the Ralph plugin and skill metadata yet still fail to expose the actual `ralph_*` MCP tools to the model; that is a host integration problem, not permission to manipulate Ralph state files directly.
+- A Codex session may show the Ralph plugin and skill metadata while exposing the callable tools only under namespaced host MCP names such as `mcp__ralph-loop-tools__ralph_start` rather than raw `ralph_start` names.
+- A true host integration problem is when neither the raw Ralph names nor the namespaced host MCP names are present; that is still not permission to manipulate Ralph state files directly.
