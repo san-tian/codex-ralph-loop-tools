@@ -81,10 +81,11 @@ class InstallCodexPluginTest(unittest.TestCase):
         self.assertTrue(install.config_is_enabled(install.config_path()))
         runtime_mcp = json.loads((expected_cache / ".mcp.json").read_text(encoding="utf-8"))
         server = runtime_mcp["mcpServers"][install.PLUGIN_NAME]
+        expected_runtime_root = self.root / "home" / "plugins" / install.PLUGIN_NAME
         self.assertEqual("python3", server["command"])
-        self.assertEqual(str(expected_cache), server["cwd"])
+        self.assertEqual(str(expected_runtime_root), server["cwd"])
         self.assertEqual(
-            ["-u", str(expected_cache / "scripts" / "ralph_loop_mcp_server.py")],
+            ["-u", str(expected_runtime_root / "scripts" / "ralph_loop_mcp_server.py")],
             server["args"],
         )
 

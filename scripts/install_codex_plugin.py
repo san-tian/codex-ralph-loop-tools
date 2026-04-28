@@ -85,7 +85,7 @@ def tree_digest(root: Path) -> str | None:
     return digest.hexdigest()
 
 
-def expected_installed_tree_digest(source: Path, target: Path) -> str | None:
+def expected_installed_tree_digest(source: Path) -> str | None:
     if not source.is_dir():
         return None
     digest = hashlib.sha256()
@@ -94,7 +94,7 @@ def expected_installed_tree_digest(source: Path, target: Path) -> str | None:
         digest.update(rel.encode("utf-8"))
         digest.update(b"\0")
         if rel == ".mcp.json":
-            digest.update(render_runtime_mcp_config(target).encode("utf-8"))
+            digest.update(render_runtime_mcp_config().encode("utf-8"))
         else:
             digest.update(path.read_bytes())
         digest.update(b"\0")
@@ -117,25 +117,26 @@ def copy_plugin_tree(source: Path, target: Path) -> None:
     shutil.copytree(source, target, ignore=ignore)
 
 
-def runtime_mcp_payload(target: Path) -> dict:
-    server_path = target / "scripts" / "ralph_loop_mcp_server.py"
+def runtime_mcp_payload() -> dict:
+    runtime_root = home_plugin_mirror()
+    server_path = runtime_root / "scripts" / "ralph_loop_mcp_server.py"
     return {
         "mcpServers": {
             PLUGIN_NAME: {
                 "command": "python3",
                 "args": ["-u", str(server_path)],
-                "cwd": str(target),
+                "cwd": str(runtime_root),
             }
         }
     }
 
 
-def render_runtime_mcp_config(target: Path) -> str:
-    return json.dumps(runtime_mcp_payload(target), indent=2) + "\n"
+def render_runtime_mcp_config() -> str:
+    return json.dumps(runtime_mcp_payload(), indent=2) + "\n"
 
 
 def write_runtime_mcp_config(target: Path) -> None:
-    (target / ".mcp.json").write_text(render_runtime_mcp_config(target), encoding="utf-8")
+    (target / ".mcp.json").write_text(render_runtime_mcp_config(), encoding="utf-8")
 
 
 def install_plugin_tree(source: Path, target: Path) -> None:
@@ -258,8 +259,9 @@ def ensure_config_enabled(path: Path) -> None:
 
 def check_install(source: Path) -> list[str]:
     errors = []
+    expected_digest = expected_installed_tree_digest(source)
     for target in (home_plugin_mirror(), cache_plugin_path(source)):
-        if tree_digest(target) != expected_installed_tree_digest(source, target):
+        if tree_digest(target) != expected_digest:
             errors.append(f"out of date: {target}")
     marketplace = home_marketplace_path()
     if not marketplace.is_file():
