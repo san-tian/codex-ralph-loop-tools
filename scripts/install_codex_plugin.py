@@ -85,6 +85,22 @@ def tree_digest(root: Path) -> str | None:
     return digest.hexdigest()
 
 
+def expected_installed_tree_digest(source: Path, target: Path) -> str | None:
+    if not source.is_dir():
+        return None
+    digest = hashlib.sha256()
+    for path in iter_tree_files(source):
+        rel = path.relative_to(source).as_posix()
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        if rel == ".mcp.json":
+            digest.update(render_runtime_mcp_config(target).encode("utf-8"))
+        else:
+            digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def copy_plugin_tree(source: Path, target: Path) -> None:
     if target.exists():
         shutil.rmtree(target)
@@ -99,6 +115,32 @@ def copy_plugin_tree(source: Path, target: Path) -> None:
 
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, target, ignore=ignore)
+
+
+def runtime_mcp_payload(target: Path) -> dict:
+    server_path = target / "scripts" / "ralph_loop_mcp_server.py"
+    return {
+        "mcpServers": {
+            PLUGIN_NAME: {
+                "command": "python3",
+                "args": ["-u", str(server_path)],
+                "cwd": str(target),
+            }
+        }
+    }
+
+
+def render_runtime_mcp_config(target: Path) -> str:
+    return json.dumps(runtime_mcp_payload(target), indent=2) + "\n"
+
+
+def write_runtime_mcp_config(target: Path) -> None:
+    (target / ".mcp.json").write_text(render_runtime_mcp_config(target), encoding="utf-8")
+
+
+def install_plugin_tree(source: Path, target: Path) -> None:
+    copy_plugin_tree(source, target)
+    write_runtime_mcp_config(target)
 
 
 def marketplace_entry() -> dict:
@@ -216,9 +258,8 @@ def ensure_config_enabled(path: Path) -> None:
 
 def check_install(source: Path) -> list[str]:
     errors = []
-    source_digest = tree_digest(source)
     for target in (home_plugin_mirror(), cache_plugin_path(source)):
-        if tree_digest(target) != source_digest:
+        if tree_digest(target) != expected_installed_tree_digest(source, target):
             errors.append(f"out of date: {target}")
     marketplace = home_marketplace_path()
     if not marketplace.is_file():
@@ -255,9 +296,9 @@ def main() -> int:
         print("up to date: Codex Ralph plugin install")
         return 0
 
-    copy_plugin_tree(source, home_plugin_mirror())
+    install_plugin_tree(source, home_plugin_mirror())
     write_marketplace(home_marketplace_path())
-    copy_plugin_tree(source, cache_plugin_path(source))
+    install_plugin_tree(source, cache_plugin_path(source))
     ensure_config_enabled(config_path())
     print(f"wrote {home_plugin_mirror()}")
     print(f"wrote {home_marketplace_path()}")

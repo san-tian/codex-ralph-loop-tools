@@ -50,16 +50,18 @@ class InstallCodexPluginTest(unittest.TestCase):
             json.dumps({"mcpServers": {"ralph-loop-tools": {"command": "python3"}}}) + "\n",
             encoding="utf-8",
         )
-        (source / "scripts" / "server.py").write_text("print('ok')\n", encoding="utf-8")
+        (source / "scripts" / "ralph_loop_mcp_server.py").write_text(
+            "print('ok')\n", encoding="utf-8"
+        )
         (source / "skills" / "ralph" / "SKILL.md").write_text("# Ralph\n", encoding="utf-8")
         return source
 
     def test_install_paths_and_check_are_consistent(self) -> None:
         source = self.make_source()
 
-        install.copy_plugin_tree(source, install.home_plugin_mirror())
+        install.install_plugin_tree(source, install.home_plugin_mirror())
         install.write_marketplace(install.home_marketplace_path())
-        install.copy_plugin_tree(source, install.cache_plugin_path(source))
+        install.install_plugin_tree(source, install.cache_plugin_path(source))
         install.ensure_config_enabled(install.config_path())
 
         self.assertEqual([], install.check_install(source))
@@ -77,6 +79,14 @@ class InstallCodexPluginTest(unittest.TestCase):
         self.assertEqual(install.MARKETPLACE_NAME, marketplace["name"])
         self.assertIn(install.marketplace_entry(), marketplace["plugins"])
         self.assertTrue(install.config_is_enabled(install.config_path()))
+        runtime_mcp = json.loads((expected_cache / ".mcp.json").read_text(encoding="utf-8"))
+        server = runtime_mcp["mcpServers"][install.PLUGIN_NAME]
+        self.assertEqual("python3", server["command"])
+        self.assertEqual(str(expected_cache), server["cwd"])
+        self.assertEqual(
+            ["-u", str(expected_cache / "scripts" / "ralph_loop_mcp_server.py")],
+            server["args"],
+        )
 
     def test_check_uses_manifest_versioned_cache_directory(self) -> None:
         source = self.make_source()
@@ -90,9 +100,9 @@ class InstallCodexPluginTest(unittest.TestCase):
             / "local"
         )
 
-        install.copy_plugin_tree(source, install.home_plugin_mirror())
+        install.install_plugin_tree(source, install.home_plugin_mirror())
         install.write_marketplace(install.home_marketplace_path())
-        install.copy_plugin_tree(source, install.cache_plugin_path(source))
+        install.install_plugin_tree(source, install.cache_plugin_path(source))
         install.ensure_config_enabled(install.config_path())
 
         self.assertFalse(old_local_cache.exists())
