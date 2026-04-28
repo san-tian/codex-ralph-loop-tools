@@ -60,6 +60,19 @@ def temporary_ralph_repo(repo_root: Path):
 
 
 class RalphTmuxFollowupTests(unittest.TestCase):
+    def test_initialize_echoes_client_protocol_version(self) -> None:
+        result = ralph.handle_call(
+            "initialize",
+            {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "codex", "version": "0.125.0"},
+            },
+        )
+
+        self.assertEqual(result["protocolVersion"], "2025-06-18")
+        self.assertEqual(result["serverInfo"]["name"], ralph.SERVER_NAME)
+
     def make_state(self, name: str, *, iteration: int = 1, status: str = "active", owner_session: str | None = None) -> ralph.LoopState:
         task_path = ralph.loop_task_path(name)
         task_path.parent.mkdir(parents=True, exist_ok=True)

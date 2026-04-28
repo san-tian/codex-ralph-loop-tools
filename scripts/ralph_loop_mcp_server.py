@@ -1164,8 +1164,13 @@ def resolve_display_state(arguments: dict[str, Any]) -> LoopState | None:
 
 def handle_call(method: str, params: dict[str, Any] | None) -> dict[str, Any]:
     if method == "initialize":
+        protocol_version = PROTOCOL_VERSION
+        if isinstance(params, dict):
+            requested_protocol_version = params.get("protocolVersion")
+            if isinstance(requested_protocol_version, str) and requested_protocol_version:
+                protocol_version = requested_protocol_version
         return {
-            "protocolVersion": PROTOCOL_VERSION,
+            "protocolVersion": protocol_version,
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         }

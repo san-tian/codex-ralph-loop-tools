@@ -332,6 +332,8 @@ First check whether the installed cache `.mcp.json` contains absolute paths. The
 
 If the installed MCP config still contains `"cwd": "."` plus a relative `scripts/ralph_loop_mcp_server.py` path, Codex sessions started from unrelated projects can launch Python against the wrong cwd. Refresh the install/cache with `python3 scripts/install_codex_plugin.py` and restart or reload Codex.
 
+If the paths are already absolute but Codex still reports startup timeouts, verify that the installed server echoes the MCP `initialize.params.protocolVersion` value in its initialize response. Newer Codex MCP clients can request a newer protocol version than the server's default constant; returning the requested version avoids a slow host-side startup failure even though direct `tools/list` probes may look healthy.
+
 ### `this session is reading another session's loop`
 
 The current implementation isolates implicit current-loop resolution by the hook event `session_id` first and by `CODEX_THREAD_ID` / `CODEX_WEB_RESUME_SESSION_ID` elsewhere. A process with no session id should no longer auto-adopt a foreign owned loop. If this still happens, inspect the hook payload/session environment and the files under:
