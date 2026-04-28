@@ -41,8 +41,17 @@ def home_marketplace_path() -> Path:
     return home_root() / ".agents" / "plugins" / "marketplace.json"
 
 
-def cache_plugin_path() -> Path:
-    return codex_home() / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME / "local"
+def plugin_version(source: Path) -> str:
+    manifest = source / ".codex-plugin" / "plugin.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    version = payload.get("version")
+    if not isinstance(version, str) or not version:
+        raise ValueError(f"Missing plugin version in {manifest}")
+    return version
+
+
+def cache_plugin_path(source: Path) -> Path:
+    return codex_home() / "plugins" / "cache" / MARKETPLACE_NAME / PLUGIN_NAME / plugin_version(source)
 
 
 def config_path() -> Path:
@@ -208,7 +217,7 @@ def ensure_config_enabled(path: Path) -> None:
 def check_install(source: Path) -> list[str]:
     errors = []
     source_digest = tree_digest(source)
-    for target in (home_plugin_mirror(), cache_plugin_path()):
+    for target in (home_plugin_mirror(), cache_plugin_path(source)):
         if tree_digest(target) != source_digest:
             errors.append(f"out of date: {target}")
     marketplace = home_marketplace_path()
@@ -248,11 +257,11 @@ def main() -> int:
 
     copy_plugin_tree(source, home_plugin_mirror())
     write_marketplace(home_marketplace_path())
-    copy_plugin_tree(source, cache_plugin_path())
+    copy_plugin_tree(source, cache_plugin_path(source))
     ensure_config_enabled(config_path())
     print(f"wrote {home_plugin_mirror()}")
     print(f"wrote {home_marketplace_path()}")
-    print(f"wrote {cache_plugin_path()}")
+    print(f"wrote {cache_plugin_path(source)}")
     print(f"updated {config_path()}")
     return 0
 

@@ -38,6 +38,7 @@ class InstallCodexPluginTest(unittest.TestCase):
             json.dumps(
                 {
                     "name": install.PLUGIN_NAME,
+                    "version": "1.2.3",
                     "mcpServers": "./.mcp.json",
                     "skills": "./skills/",
                 }
@@ -58,14 +59,44 @@ class InstallCodexPluginTest(unittest.TestCase):
 
         install.copy_plugin_tree(source, install.home_plugin_mirror())
         install.write_marketplace(install.home_marketplace_path())
-        install.copy_plugin_tree(source, install.cache_plugin_path())
+        install.copy_plugin_tree(source, install.cache_plugin_path(source))
         install.ensure_config_enabled(install.config_path())
 
         self.assertEqual([], install.check_install(source))
+        expected_cache = (
+            self.root
+            / "codex"
+            / "plugins"
+            / "cache"
+            / install.MARKETPLACE_NAME
+            / install.PLUGIN_NAME
+            / "1.2.3"
+        )
+        self.assertEqual(expected_cache, install.cache_plugin_path(source))
         marketplace = json.loads(install.home_marketplace_path().read_text(encoding="utf-8"))
         self.assertEqual(install.MARKETPLACE_NAME, marketplace["name"])
         self.assertIn(install.marketplace_entry(), marketplace["plugins"])
         self.assertTrue(install.config_is_enabled(install.config_path()))
+
+    def test_check_uses_manifest_versioned_cache_directory(self) -> None:
+        source = self.make_source()
+        old_local_cache = (
+            self.root
+            / "codex"
+            / "plugins"
+            / "cache"
+            / install.MARKETPLACE_NAME
+            / install.PLUGIN_NAME
+            / "local"
+        )
+
+        install.copy_plugin_tree(source, install.home_plugin_mirror())
+        install.write_marketplace(install.home_marketplace_path())
+        install.copy_plugin_tree(source, install.cache_plugin_path(source))
+        install.ensure_config_enabled(install.config_path())
+
+        self.assertFalse(old_local_cache.exists())
+        self.assertEqual([], install.check_install(source))
 
     def test_check_reports_missing_install(self) -> None:
         source = self.make_source()

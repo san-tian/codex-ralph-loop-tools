@@ -69,7 +69,7 @@ This keeps the always-discovered Codex plugin locations synchronized:
 
 - `/root/.agents/plugins/marketplace.json` — home marketplace discovered regardless of the active cwd
 - `/root/plugins/ralph-loop-tools` — home-local plugin source mirror used by that marketplace
-- `/root/.codex/plugins/cache/workspace-local/ralph-loop-tools/local` — installed plugin cache loaded by Codex sessions
+- `/root/.codex/plugins/cache/workspace-local/ralph-loop-tools/<manifest-version>` — installed plugin cache loaded by Codex sessions, currently `0.3.0`
 - `/root/.codex/config.toml` — contains `[plugins."ralph-loop-tools@workspace-local"]` with `enabled = true`
 
 Why this exists: the original `ccss/.agents/plugins/marketplace.json` is only discovered when Codex is started from the `ccss` tree or a repo whose root resolves there. This plugin is now its own standalone Git repo, so sessions started inside `plugins/ralph-loop-tools/` can otherwise refresh plugins and report that `ralph-loop-tools@workspace-local` no longer exists.
