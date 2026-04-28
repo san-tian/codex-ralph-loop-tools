@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from io import BytesIO
 from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
@@ -60,6 +61,48 @@ def temporary_ralph_repo(repo_root: Path):
 
 
 class RalphTmuxFollowupTests(unittest.TestCase):
+    def test_read_message_accepts_jsonl_framing(self) -> None:
+        original_stdin = ralph.sys.stdin
+        original_framing = ralph.STDIO_FRAMING
+
+        class FakeStdin:
+            buffer = BytesIO(
+                b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n'
+            )
+
+        try:
+            ralph.STDIO_FRAMING = "headers"
+            ralph.sys.stdin = FakeStdin()
+
+            message = ralph.read_message()
+
+            self.assertEqual(message["method"], "initialize")
+            self.assertEqual(ralph.STDIO_FRAMING, "jsonl")
+        finally:
+            ralph.sys.stdin = original_stdin
+            ralph.STDIO_FRAMING = original_framing
+
+    def test_write_message_uses_jsonl_after_jsonl_input(self) -> None:
+        original_stdout = ralph.sys.stdout
+        original_framing = ralph.STDIO_FRAMING
+
+        class FakeStdout:
+            def __init__(self) -> None:
+                self.buffer = BytesIO()
+
+        fake_stdout = FakeStdout()
+        try:
+            ralph.STDIO_FRAMING = "jsonl"
+            ralph.sys.stdout = fake_stdout
+
+            ralph.write_message({"jsonrpc": "2.0", "id": 1, "result": {"ok": True}})
+
+            self.assertTrue(fake_stdout.buffer.getvalue().endswith(b"\n"))
+            self.assertNotIn(b"Content-Length", fake_stdout.buffer.getvalue())
+        finally:
+            ralph.sys.stdout = original_stdout
+            ralph.STDIO_FRAMING = original_framing
+
     def test_initialize_echoes_client_protocol_version(self) -> None:
         result = ralph.handle_call(
             "initialize",

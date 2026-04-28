@@ -47,6 +47,7 @@ CURRENT_LOOP_PATH = STATE_ROOT / "current.json"
 CURRENT_SESSION_ROOT = STATE_ROOT / "current-by-session"
 PROMPT_TRIGGER_PATH = STATE_ROOT / "expected-prompt.json"
 PROMPT_TRIGGER_SESSION_ROOT = STATE_ROOT / "expected-prompt-by-session"
+STDIO_FRAMING = "headers"
 
 
 @dataclass
@@ -1224,11 +1225,17 @@ def handle_call(method: str, params: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def read_message() -> dict[str, Any] | None:
+    global STDIO_FRAMING
+
     headers: dict[str, str] = {}
     while True:
         line = sys.stdin.buffer.readline()
         if not line:
             return None
+        stripped = line.strip()
+        if not headers and stripped.startswith(b"{"):
+            STDIO_FRAMING = "jsonl"
+            return json.loads(stripped.decode("utf-8"))
         if line in (b"\r\n", b"\n"):
             break
         key, _, value = line.decode("utf-8").partition(":")
@@ -1245,6 +1252,10 @@ def read_message() -> dict[str, Any] | None:
 
 def write_message(payload: dict[str, Any]) -> None:
     encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    if STDIO_FRAMING == "jsonl":
+        sys.stdout.buffer.write(encoded + b"\n")
+        sys.stdout.buffer.flush()
+        return
     sys.stdout.buffer.write(f"Content-Length: {len(encoded)}\r\n\r\n".encode("utf-8"))
     sys.stdout.buffer.write(encoded)
     sys.stdout.buffer.flush()

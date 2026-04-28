@@ -334,6 +334,8 @@ If the installed MCP config still contains `"cwd": "."` plus a relative `scripts
 
 If the paths are already absolute but Codex still reports startup timeouts, verify that the installed server echoes the MCP `initialize.params.protocolVersion` value in its initialize response. Newer Codex MCP clients can request a newer protocol version than the server's default constant; returning the requested version avoids a slow host-side startup failure even though direct `tools/list` probes may look healthy.
 
+Also verify the stdio framing used by the client. Ralph accepts standard `Content-Length` MCP frames and newline-delimited JSON-RPC; it answers in the same framing style as the first received request. A framing mismatch can make the server exit immediately while Codex surfaces the failure only after its startup timeout.
+
 ### `this session is reading another session's loop`
 
 The current implementation isolates implicit current-loop resolution by the hook event `session_id` first and by `CODEX_THREAD_ID` / `CODEX_WEB_RESUME_SESSION_ID` elsewhere. A process with no session id should no longer auto-adopt a foreign owned loop. If this still happens, inspect the hook payload/session environment and the files under:
