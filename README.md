@@ -56,17 +56,23 @@ Command note:
 
 If you are an agent helping a user configure this plugin in the `ccss` workspace, do these steps in order.
 
-### 1. Verify the plugin is discoverable
+### 1. Install or refresh the Codex plugin cache
 
-Check these files:
+Run from the source plugin checkout:
 
-- `/vePFS-Mindverse/user/intern/ccss/.agents/plugins/marketplace.json`
-- `/root/.codex/config.toml`
+```bash
+cd /vePFS-Mindverse/user/intern/ccss/plugins/ralph-loop-tools
+python3 scripts/install_codex_plugin.py
+```
 
-Expected state:
+This keeps the always-discovered Codex plugin locations synchronized:
 
-- Marketplace contains `ralph-loop-tools` with source path `./plugins/ralph-loop-tools`
-- Codex config contains `[plugins."ralph-loop-tools@workspace-local"]` with `enabled = true`
+- `/root/.agents/plugins/marketplace.json` — home marketplace discovered regardless of the active cwd
+- `/root/plugins/ralph-loop-tools` — home-local plugin source mirror used by that marketplace
+- `/root/.codex/plugins/cache/workspace-local/ralph-loop-tools/local` — installed plugin cache loaded by Codex sessions
+- `/root/.codex/config.toml` — contains `[plugins."ralph-loop-tools@workspace-local"]` with `enabled = true`
+
+Why this exists: the original `ccss/.agents/plugins/marketplace.json` is only discovered when Codex is started from the `ccss` tree or a repo whose root resolves there. This plugin is now its own standalone Git repo, so sessions started inside `plugins/ralph-loop-tools/` can otherwise refresh plugins and report that `ralph-loop-tools@workspace-local` no longer exists.
 
 ### 2. Install the supported hooks
 
@@ -90,7 +96,9 @@ Run:
 ```bash
 cd /vePFS-Mindverse/user/intern/ccss/plugins/ralph-loop-tools
 python3 -m py_compile scripts/ralph_loop_mcp_server.py scripts/ralph_hook.py scripts/ralph_tmux_followup.py scripts/ralph_loop_supervisor.py scripts/install_workspace_hooks.py scripts/test_ralph_tmux_followup.py
-python3 -m unittest -q scripts.test_ralph_tmux_followup
+python3 -m py_compile scripts/install_codex_plugin.py scripts/test_install_codex_plugin.py
+python3 -m unittest -q scripts.test_ralph_tmux_followup scripts.test_install_codex_plugin
+python3 scripts/install_codex_plugin.py --check
 python3 scripts/install_workspace_hooks.py --check
 python3 -m json.tool hooks.json >/dev/null
 python3 -m json.tool .codex-plugin/plugin.json >/dev/null
@@ -101,6 +109,7 @@ Expected results:
 
 - compile succeeds
 - unit tests pass
+- plugin install check reports `up to date`
 - hook install check reports `up to date`
 - JSON checks succeed
 - the final command exits non-zero and says `TMUX is not set`
@@ -109,7 +118,7 @@ Expected results:
 
 Tell the user:
 
-- whether the plugin is enabled
+- whether the plugin cache install is current
 - whether hooks are installed and current
 - whether tests passed
 - whether the current session is inside tmux
@@ -156,19 +165,22 @@ If you want to hand this setup job to another agent, give it this block:
 Configure and verify the Ralph Loop Tools plugin in /vePFS-Mindverse/user/intern/ccss.
 
 Do these steps exactly:
-1. Verify /vePFS-Mindverse/user/intern/ccss/.agents/plugins/marketplace.json contains ralph-loop-tools -> ./plugins/ralph-loop-tools.
-2. Verify /root/.codex/config.toml contains [plugins."ralph-loop-tools@workspace-local"] with enabled = true.
-3. Run: cd /vePFS-Mindverse/user/intern/ccss && python3 plugins/ralph-loop-tools/scripts/install_workspace_hooks.py
-4. Run verification commands from /vePFS-Mindverse/user/intern/ccss/plugins/ralph-loop-tools:
+1. Run: cd /vePFS-Mindverse/user/intern/ccss/plugins/ralph-loop-tools && python3 scripts/install_codex_plugin.py
+2. Verify /root/.agents/plugins/marketplace.json contains ralph-loop-tools -> ./plugins/ralph-loop-tools.
+3. Verify /root/.codex/config.toml contains [plugins."ralph-loop-tools@workspace-local"] with enabled = true.
+4. Run: cd /vePFS-Mindverse/user/intern/ccss && python3 plugins/ralph-loop-tools/scripts/install_workspace_hooks.py
+5. Run verification commands from /vePFS-Mindverse/user/intern/ccss/plugins/ralph-loop-tools:
    - python3 -m py_compile scripts/ralph_loop_mcp_server.py scripts/ralph_hook.py scripts/ralph_tmux_followup.py scripts/ralph_loop_supervisor.py scripts/install_workspace_hooks.py scripts/test_ralph_tmux_followup.py
-   - python3 -m unittest -q scripts.test_ralph_tmux_followup
+   - python3 -m py_compile scripts/install_codex_plugin.py scripts/test_install_codex_plugin.py
+   - python3 -m unittest -q scripts.test_ralph_tmux_followup scripts.test_install_codex_plugin
+   - python3 scripts/install_codex_plugin.py --check
    - python3 scripts/install_workspace_hooks.py --check
    - python3 -m json.tool hooks.json >/dev/null
    - python3 -m json.tool .codex-plugin/plugin.json >/dev/null
    - env -u TMUX python3 scripts/ralph_tmux_followup.py --dry-run
-5. If TMUX is unset in the active Codex session, explicitly tell the user automatic follow-up is unavailable in this environment.
-6. Teach the user these commands: start loop, continue loop, status, pause, resume, cancel, archive.
-7. Remind the user that editing the task file alone does not advance the loop; ralph_done or successful tmux auto-follow is required.
+6. If TMUX is unset in the active Codex session, explicitly tell the user automatic follow-up is unavailable in this environment.
+7. Teach the user these commands: start loop, continue loop, status, pause, resume, cancel, archive.
+8. Remind the user that editing the task file alone does not advance the loop; ralph_done or successful tmux auto-follow is required.
 ```
 
 ## What Users Can Do
@@ -309,6 +321,7 @@ What to tell the user:
 
 Safe operator check:
 
+- run `python3 scripts/install_codex_plugin.py --check`; if it reports out-of-date paths, run `python3 scripts/install_codex_plugin.py` and restart or reload the Codex session so tool discovery can rebuild from the refreshed cache
 - directly probe `scripts/ralph_loop_mcp_server.py` over stdio with `initialize` and `tools/list`; if that returns the raw `ralph_*` tools, the plugin server is healthy and the remaining gap is between the host session and MCP tool injection/namespacing
 
 ### `this session is reading another session's loop`
@@ -325,8 +338,10 @@ The current implementation isolates implicit current-loop resolution by the hook
 - `scripts/ralph_loop_mcp_server.py` — MCP server and Ralph state machine
 - `scripts/ralph_hook.py` — Stop hook dispatcher plus exact Ralph-prompt guidance injection
 - `scripts/ralph_tmux_followup.py` — tmux compact-and-paste worker
+- `scripts/install_codex_plugin.py` — writes the home marketplace, home plugin mirror, Codex plugin cache, and config enablement
 - `scripts/install_workspace_hooks.py` — writes the supported workspace hook file
 - `scripts/test_ralph_tmux_followup.py` — plugin regression tests
+- `scripts/test_install_codex_plugin.py` — install/cache regression tests
 - `skills/ralph/SKILL.md` — main natural-language skill
 - `skills/ralph-wiggum/SKILL.md` — alias skill
 

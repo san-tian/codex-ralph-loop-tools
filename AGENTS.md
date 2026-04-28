@@ -18,7 +18,7 @@
 - `.codex-plugin/plugin.json` — Codex plugin manifest.
 - `.mcp.json` — local MCP server wiring.
 - `hooks.json` — Codex lifecycle hook wiring.
-- `scripts/` — MCP server, hooks, workspace-hook installer, tmux follow-up worker, follow-up logic tests, external supervisor script.
+- `scripts/` — MCP server, hooks, Codex plugin/cache installer, workspace-hook installer, tmux follow-up worker, tests, external supervisor script.
 - `/vePFS-Mindverse/user/intern/ccss/.codex/hooks.json` — supported config-layer hook entry for Ralph across the `ccss/` tree.
 - `skills/` — natural-language skill instructions for `ralph` and `ralph-wiggum`.
 

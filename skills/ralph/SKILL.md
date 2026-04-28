@@ -35,6 +35,8 @@ Do **not** bypass the Ralph control surface by calling internal helper functions
 
 If the Codex host exposes the Ralph plugin/skill in the prompt but the actual callable tool list does **not** include either the raw Ralph names (`ralph_start`, `ralph_done`, `ralph_status`, ...) or the host-qualified MCP names (`mcp__ralph-loop-tools__ralph_start`, `mcp__ralph-loop-tools__ralph_done`, ...), treat that as a host-side MCP exposure failure. In that situation, tell the user the official Ralph control surface is unavailable in this session and do **not** substitute direct reads or writes of `.tmp/ralph-loop-tools/` state files for the missing tools.
 
+Before diagnosing a persistent missing-tool problem, check `scripts/install_codex_plugin.py --check`. That install check verifies the home marketplace, home plugin mirror, Codex plugin cache, and config enablement that make `ralph-loop-tools@workspace-local` discoverable even when the active cwd is this standalone plugin repo instead of the broader `ccss` workspace.
+
 ## Tmux Requirement
 
 Pi-like automatic follow-up requires the current Codex TUI to run inside tmux.
@@ -47,7 +49,7 @@ Ralph resolves hook-driven session scope from the hook event's `session_id` firs
 
 Explicit loop names do not bypass active-loop ownership. If a loop is still active in another Codex session, mutating operations such as `ralph_done`, `ralph_stop`, `force=true` restart of that same active loop, or `ralph_cancel` must fail instead of letting one session change another session's active loop.
 
-Automatic follow-up also depends on Ralph hooks being installed through a supported config-layer `hooks.json`. In this workspace, `scripts/install_workspace_hooks.py` writes `/vePFS-Mindverse/user/intern/ccss/.codex/hooks.json`, and that file calls the source-tree `scripts/ralph_hook.py` by absolute path so the active cwd can be another project under `ccss/`.
+Automatic follow-up also depends on Ralph hooks being installed through a supported config-layer `hooks.json`. In this workspace, `scripts/install_codex_plugin.py` refreshes the always-discovered plugin install/cache, while `scripts/install_workspace_hooks.py` writes `/vePFS-Mindverse/user/intern/ccss/.codex/hooks.json`; that hook file calls the source-tree `scripts/ralph_hook.py` by absolute path so the active cwd can be another project under `ccss/`.
 
 Ralph hook guidance is intentionally narrow: `SessionStart` stays silent, and `UserPromptSubmit` only injects Ralph loop context when the submitted prompt exactly matches a session-scoped next-iteration prompt previously emitted by Ralph itself. Mentioning Ralph in ordinary prose does not trigger hook injection.
 
@@ -143,3 +145,4 @@ This skill intentionally mirrors Pi Ralph's structure and wording, but Codex can
 - It cannot observe the assistant's emitted `<promise>COMPLETE</promise>` directly, so that marker must be written into the task file if you want to use it.
 - A Codex session may show the Ralph plugin and skill metadata while exposing the callable tools only under namespaced host MCP names such as `mcp__ralph-loop-tools__ralph_start` rather than raw `ralph_start` names.
 - A true host integration problem is when neither the raw Ralph names nor the namespaced host MCP names are present; that is still not permission to manipulate Ralph state files directly.
+- Missing tools can also come from stale plugin install/cache state; run `scripts/install_codex_plugin.py --check` and refresh with `scripts/install_codex_plugin.py` before restarting or reloading Codex.
